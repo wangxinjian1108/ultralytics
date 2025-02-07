@@ -1,0 +1,21 @@
+name: yolo  # Conda environment name
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.12  # Python version
+  - cuda=12.2
+  - pip
+  - pip:
+      - ultralytics
+      - typer
+      - scipy
+      - kk
+      - matplotlib
+      - dacite
+      - dash
+      - dash_treeview_antd
+      - pandas
+      - protobuf
+      - mypy-protobuf
+      - tqdm

@@ -37,7 +37,10 @@ def load_class_names(class_names_arg):
             return None
     else:
         # Treat as comma-separated class names
-        return [name.strip() for name in class_names_arg.split(',')]
+        names = [name.strip() for name in class_names_arg.split('.')]
+        # replace "_" by " "
+        names = [name.replace('_', ' ') for name in names]
+        return names
 
 def run_segmentation(model_path, image_path, save_path=None, class_names=None, imgsz=None):
     """
@@ -49,6 +52,9 @@ def run_segmentation(model_path, image_path, save_path=None, class_names=None, i
         save_path (str, optional): Path to save the visualized image. If None, will show the image.
         class_names (list, optional): List of class names to use for visualization
         imgsz (int or list, optional): Image size as single int or [height, width]
+    
+    Returns:
+        tuple: (results, detection_json_path) - The model results and path to the saved JSON file
     """
     try:
         # Create a save directory for results if needed
@@ -61,7 +67,11 @@ def run_segmentation(model_path, image_path, save_path=None, class_names=None, i
         # Run prediction with custom image size if specified
         results = model.predict(source=image_path, save=False, imgsz=imgsz)
         
-        # Print input resolution being used
+        # output the result names to json
+        with open('result_names.json', 'w') as f:
+            json.dump(results[0].names, f, indent=4)
+            print(f"Saved result names to result_names.json")
+            
         if imgsz:
             print(f"Using input resolution: {imgsz}")
         
@@ -87,16 +97,34 @@ def run_segmentation(model_path, image_path, save_path=None, class_names=None, i
             # Get model class names (all classes the model knows)
             model_class_names = result.names
             
-            # Create color mapping for classes
+            # Create fixed color mapping for classes (不使用随机颜色)
             colors_map = {}
+            # 预定义一些鲜明的颜色（BGR格式）
+            predefined_colors = {
+                'person': [0, 0, 255],     # 红色
+                'car': [0, 255, 0],        # 绿色
+                'bicycle': [255, 0, 0],    # 蓝色
+                'motorcycle': [255, 255, 0],  # 青色
+                'truck': [255, 0, 255],    # 紫色
+                'bus': [0, 255, 255],      # 黄色
+                'traffic cone': [128, 0, 128],  # 紫色
+                'traffic light': [255, 128, 0], # 橙色
+                'stop sign': [0, 128, 255],   # 橙红色
+            }
+            
             if class_names:
-                num_classes = len(class_names)
-                random_colors = np.random.randint(0, 255, size=(num_classes, 3), dtype=np.uint8)
-                for i, name in enumerate(class_names):
-                    colors_map[name] = random_colors[i].tolist()
+                for name in class_names:
+                    if name in predefined_colors:
+                        colors_map[name] = predefined_colors[name]
+                    else:
+                        # 对于未预定义的类别，使用深灰色
+                        colors_map[name] = [80, 80, 80]
             
             # Create a blank mask for all classes (will be filled with class-specific colors)
             composite_mask = np.zeros_like(orig_img)
+            
+            # 存储用于JSON输出的完整检测结果
+            detection_results = []
             
             # Process all detections
             annotations = []
@@ -132,14 +160,35 @@ def run_segmentation(model_path, image_path, save_path=None, class_names=None, i
                     # Convert mask from 0-1 to 0-255
                     binary_mask = (mask > 0).astype(np.uint8) * 255
                     
+                    # 为JSON编码掩码 - 找到掩码轮廓并将其编码为多边形轮廓点
+                    # 这样掩码就可以用紧凑的点列表而不是完整的二值图像来表示
+                    contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    
+                    # 如果找到轮廓，简化并存储它们
+                    mask_polygons = []
+                    for contour in contours:
+                        # 简化轮廓，减少点数
+                        epsilon = 0.005 * cv2.arcLength(contour, True)
+                        approx = cv2.approxPolyDP(contour, epsilon, True)
+                        if len(approx) > 2:  # 确保至少有3个点形成一个多边形
+                            # 将轮廓转换为点列表 [[x1,y1], [x2,y2], ...]
+                            polygon = [[int(p[0][0]), int(p[0][1])] for p in approx]
+                            mask_polygons.append(polygon)
+                    
+                    # 为当前对象存储完整的检测结果
+                    detection_results.append({
+                        'type': cls_name,
+                        'bbox': [int(x1), int(y1), int(x2), int(y2)],
+                        'confidence': float(conf),
+                        'mask_polygons': mask_polygons
+                    })
+                    
                     # Assign color based on class
                     if class_names:
                         color = colors_map.get(cls_name, [0, 255, 0])  # Default to green if not found
                     else:
-                        # Generate a color based on class ID
-                        color = (int(np.random.randint(0, 255)), 
-                                 int(np.random.randint(0, 255)), 
-                                 int(np.random.randint(0, 255)))
+                        # 使用预定义的颜色，如果没有则使用灰色
+                        color = predefined_colors.get(cls_name, [80, 80, 80])
                     
                     # Create a colored mask
                     colored_mask = np.zeros_like(orig_img)
@@ -215,13 +264,31 @@ def run_segmentation(model_path, image_path, save_path=None, class_names=None, i
                 # Save the annotated image
                 cv2.imwrite(save_path, result_img)
                 print(f"Saved visualization to {save_path}")
+                
+                # 保存检测结果为JSON文件
+                json_save_path = save_path.rsplit('.', 1)[0] + '_detections.json'
+                
+                # 创建包含图像信息的完整结果对象
+                full_results = {
+                    "image": {
+                        "path": image_path,
+                        "width": orig_img.shape[1],
+                        "height": orig_img.shape[0],
+                        "channels": orig_img.shape[2] if len(orig_img.shape) > 2 else 1
+                    },
+                    "detections": detection_results
+                }
+                
+                with open(json_save_path, 'w') as f:
+                    json.dump(full_results, f, indent=2)
+                print(f"Saved detection results to {json_save_path}")
             else:
                 # Display the image
                 cv2.imshow("Segmentation Result", result_img)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
             
-        return results
+        return results, detection_results
     except Exception as e:
         print(f"Error running segmentation: {str(e)}")
         import traceback
@@ -235,7 +302,7 @@ def main():
     parser.add_argument('--source', type=str, required=True, help='Path to the input image or URL')
     parser.add_argument('--output-dir', type=str, default='output', help='Directory to save the output image')
     parser.add_argument('--class-names', type=str, help='Path to JSON file with class names or comma-separated list of class names')
-    parser.add_argument('--imgsz', type=int, nargs='+', default=None, help='Image size as single int or [height, width], e.g. --imgsz 640 or --imgsz 640 640')
+    parser.add_argument('--imgsz', type=int, nargs='+', default=[640], help='Image size as single int or [height, width], e.g. --imgsz 640 or --imgsz 640 640')
     
     args = parser.parse_args()
     
@@ -262,8 +329,42 @@ def main():
     input_filename = Path(args.source).stem
     save_path = str(output_dir / f"{input_filename}_segmented.jpg")
     
-    results = run_segmentation(args.model, args.source, save_path, class_names, imgsz)
-    return results
+    # 运行分割并获取结果
+    results, detection_results = run_segmentation(args.model, args.source, save_path, class_names, imgsz)
+    
+    # 如果没有在run_segmentation中保存JSON（例如，没有指定save_path），这里手动保存
+    if save_path and detection_results:
+        json_save_path = save_path.rsplit('.', 1)[0] + '_detections.json'
+        if not os.path.exists(json_save_path):
+            # 获取原图像尺寸信息
+            try:
+                orig_img = cv2.imread(args.source)
+                image_info = {
+                    "path": args.source,
+                    "width": orig_img.shape[1],
+                    "height": orig_img.shape[0],
+                    "channels": orig_img.shape[2] if len(orig_img.shape) > 2 else 1
+                }
+            except:
+                # 如果无法读取图像，提供基本信息
+                image_info = {
+                    "path": args.source,
+                    "width": 0,
+                    "height": 0,
+                    "channels": 3
+                }
+            
+            # 创建完整结果对象
+            full_results = {
+                "image": image_info,
+                "detections": detection_results
+            }
+            
+            with open(json_save_path, 'w') as f:
+                json.dump(full_results, f, indent=2)
+            print(f"Saved detection results to {json_save_path}")
+    
+    return results, detection_results
 
 if __name__ == '__main__':
     main()

@@ -11,7 +11,8 @@ MODEL=${1:-"yoloe-11l-seg-pf.pt"}
 INPUT_DIR=${2:-"/home/xinjian/Code/VAutoLabelerCore/data/1027_20241230T102329_pdb-l4e-c0010_20_570to578/raw_images/front_left_camera"}
 OUTPUT_DIR=${3:-"$(pwd)/tmp/video"}
 FPS=${4:-10}
-CLASS_NAMES=${5:-"car,traffic cone,person,bicycle,motorcycle"}
+CLASS_NAMES=${5:-"car.suv.truck.traffic_cone.person.bicycle.motorcycle"}
+IMAGE_SIZE=${6:-544 960}
 
 # Check if required directories exist
 if [ ! -d "$INPUT_DIR" ]; then
@@ -35,7 +36,7 @@ echo "Using model: $MODEL"
 echo "Video FPS: $FPS"
 
 # Build the command with optional class names
-CMD="python scripts/segment_dir.py --model \"$MODEL\" --input-dir \"$INPUT_DIR\" --output-dir \"$OUTPUT_DIR\" --fps $FPS"
+CMD="python scripts/segment_dir.py --model \"$MODEL\" --input-dir \"$INPUT_DIR\" --output-dir \"$OUTPUT_DIR\" --fps $FPS --imgsz $IMAGE_SIZE"
 
 # Add class names if provided
 if [ ! -z "$CLASS_NAMES" ]; then

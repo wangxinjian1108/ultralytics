@@ -21,6 +21,7 @@ if [ ! -d "$INPUT_DIR" ]; then
 fi
 
 # Create output directory if it doesn't exist
+rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
 # Check if model exists

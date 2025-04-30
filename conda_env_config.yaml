@@ -4,7 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.12  # Python version
-  - cuda=12.2
+  - cuda=12.3
   - pip
   - pip:
       - ultralytics

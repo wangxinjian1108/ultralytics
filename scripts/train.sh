@@ -3,17 +3,15 @@
 # This script automates the process of training YOLO models with custom datasets
 
 # Default configuration
-MODEL="yolo12n.pt"
+MODEL="cache_pts/yolo12n.pt"
 DATA="/home/xinjian.wang/ultralytics/scripts/custom_object365.yaml"
 EPOCHS=100
-IMG_SIZE=640
-BATCH=192
-DEVICE="5,6,7,9"
+BATCH=120
+DEVICE="0,1,2,3,4,5,6,7,8,9"
 WORKERS=8
 NAME="yolo-12n"
-PROJECT="runs/train"
+PROJECT="runs/train_medium"
 INFERENCE=""
-CUSTOM_DIR="/mnt/juicefs/xinjian/open_dataset/object365_tiny"
 
 # Display help message
 show_help() {
@@ -26,7 +24,6 @@ show_help() {
     echo "  -m, --model MODEL          Model file path (.pt or .yaml) [default: yolo12n.pt]"
     echo "  -d, --data YAML            Dataset configuration file (.yaml) [default: object365.yaml]"
     echo "  -e, --epochs EPOCHS        Number of training epochs [default: 100]"
-    echo "  -i, --img-size SIZE        Input image size [default: 640]"
     echo "  -b, --batch BATCH          Batch size [default: 16]"
     echo "  --device DEVICE            Device to use (e.g., 0,1,2,3, cpu) [default: auto]"
     echo "  -w, --workers WORKERS      Number of dataloader workers [default: 8]"
@@ -64,10 +61,6 @@ while [[ $# -gt 0 ]]; do
         EPOCHS="$2"
         shift 2
         ;;
-    -i | --img-size)
-        IMG_SIZE="$2"
-        shift 2
-        ;;
     -b | --batch)
         BATCH="$2"
         shift 2
@@ -92,10 +85,6 @@ while [[ $# -gt 0 ]]; do
         INFERENCE="$2"
         shift 2
         ;;
-    --dir)
-        CUSTOM_DIR="$2"
-        shift 2
-        ;;
     *)
         echo "Unknown option: $1"
         show_help
@@ -115,14 +104,8 @@ if ! python -c "import ultralytics" &>/dev/null; then
     pip install ultralytics
 fi
 
-# Set Objects365 download directory if specified
-if [ -n "$CUSTOM_DIR" ]; then
-    export OBJECTS365_DIR="$CUSTOM_DIR"
-    echo "Setting Objects365 dataset download directory to: $CUSTOM_DIR"
-fi
-
 # Build the command
-CMD="python scripts/train.py --model $MODEL --data $DATA --epochs $EPOCHS --imgsz $IMG_SIZE --batch $BATCH --workers $WORKERS --name $NAME --project $PROJECT"
+CMD="python scripts/train.py --model $MODEL --data $DATA --epochs $EPOCHS --batch $BATCH --workers $WORKERS --name $NAME --project $PROJECT"
 
 if [ -n "$DEVICE" ]; then
     CMD="$CMD --device $DEVICE"

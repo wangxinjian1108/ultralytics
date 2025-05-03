@@ -3,7 +3,7 @@
 # Documentation: https://docs.ultralytics.com/datasets/detect/objects365/
 
 # Path configuration
-path: /mnt/juicefs/xinjian/open_dataset/object365_medium  # dataset root dir
+path: /mnt/juicefs/xinjian/open_dataset/object365_tiny50000  # dataset root dir
 train: images/train  # train images (relative to 'path')
 val: images/val  # val images (relative to 'path')
 # test:  # test images (optional)

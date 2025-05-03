@@ -8,7 +8,7 @@ def parse_args():
     parser.add_argument('--model', type=str, default='yolo12n.pt', help='Model file path (.pt or .yaml)')
     parser.add_argument('--data', type=str, default='coco8.yaml', help='Dataset configuration file')
     parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs')
-    parser.add_argument('--imgsz', type=int, default=640, help='Input image size')
+    parser.add_argument('--imgsz', type=int, default=960, help='Input image size')
     parser.add_argument('--batch', type=int, default=16, help='Batch size')
     parser.add_argument('--device', type=str, default='', help='Device to use (empty for auto-select)')
     parser.add_argument('--workers', type=int, default=8, help='Number of dataloader workers')
@@ -35,7 +35,11 @@ def main():
         name=args.name,
         project=args.project,
         val=False,
+        degrees=10.0
     )
+    # WARNING ⚠️ updating to 'imgsz=800'. 'train' and 'val' imgsz must be an integer, 
+    # while 'predict' and 'export' imgsz may be a [h, w] list or an integer, i.e. 
+    # 'yolo export imgsz=640,480' or 'yolo export imgsz=640'
     
     # Run inference if specified
     if args.inference and os.path.exists(args.inference):

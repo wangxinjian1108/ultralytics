@@ -13,4 +13,6 @@ yolo detect predict model=$model \
     project=$output_dir \
     name=$model_name \
     retina_masks=True \
+    data=/home/xinjian.wang/ultralytics/scripts/custom_object365.yaml \
+    imgsz=600 \
     save_txt=True

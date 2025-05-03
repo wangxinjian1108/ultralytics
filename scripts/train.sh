@@ -5,15 +5,15 @@
 # Default configuration
 MODEL="yolo12n.pt"
 DATA="/home/xinjian.wang/ultralytics/scripts/custom_object365.yaml"
-EPOCHS=100
+EPOCHS=200
 IMG_SIZE=640
-BATCH=192
-DEVICE="5,6,7,9"
+BATCH=450
+DEVICE="1,2,3,4,5,6,7,8,9"
 WORKERS=8
 NAME="yolo-12n"
-PROJECT="runs/train"
+PROJECT="runs/train_tiny50000"
 INFERENCE=""
-CUSTOM_DIR="/mnt/juicefs/xinjian/open_dataset/object365_tiny"
+CUSTOM_DIR="/mnt/juicefs/xinjian/open_dataset/object365_tiny50000"
 
 # Display help message
 show_help() {

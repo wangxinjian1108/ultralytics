@@ -21,4 +21,4 @@ yolo export model=$model \
     optimize=True \
     data=$yaml_cfg
 
-mv $dir_name/*.onnx $(pwd)/onnx/$onnx_name
+# mv $dir_name/*.onnx $(pwd)/onnx/$onnx_name
